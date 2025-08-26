@@ -1,6 +1,6 @@
 # Smart AI Calculator
 
-A modern web-based calculator that uses artificial intelligence to solve mathematical expressions, equations, and graphical problems by analyzing hand-drawn input on a digital canvas.
+A modern web-based calculator that uses artificial intelligence to solve mathematical expressions, equations, and graphical problems  by analyzing hand-drawn input on a digital canvas.
 
 ## Features
 
