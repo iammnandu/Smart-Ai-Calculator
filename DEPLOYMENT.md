@@ -33,6 +33,7 @@ git push -u origin main
 5. **Choose your repository**
 6. **Select the `calc-be-main` folder** as root directory
 7. **Add Environment Variables:**
+
    - `GEMINI_API_KEY`: Your Google Gemini API key
    - `PORT`: 8900
    - `PYTHONPATH`: /app
@@ -72,6 +73,7 @@ echo "VITE_API_URL=https://your-railway-backend-url.railway.app" > .env.producti
 ## 🔄 Alternative: Manual Deployment
 
 ### For Backend (Railway/Render/Heroku):
+
 ```bash
 # Install Railway CLI
 npm install -g @railway/cli
@@ -83,6 +85,7 @@ railway up
 ```
 
 ### For Frontend (Netlify):
+
 ```bash
 # Build the frontend
 cd calc-fe-main
@@ -110,16 +113,19 @@ netlify deploy --prod --dir=dist
 ## 🐛 Troubleshooting
 
 ### Common Issues:
+
 1. **CORS Errors**: Check CORS configuration in main.py
 2. **Environment Variables**: Ensure all required env vars are set
 3. **Build Failures**: Check package.json scripts and dependencies
 4. **API Timeouts**: Consider increasing timeout limits
 
 ### Backend Health Check:
-Visit: `https://your-backend-url.railway.app/` 
+
+Visit: `https://your-backend-url.railway.app/`
 Should return: `{"message": "Server is running"}`
 
 ### Frontend Health Check:
+
 Visit: `https://your-frontend-url.vercel.app`
 Should load the calculator interface
 

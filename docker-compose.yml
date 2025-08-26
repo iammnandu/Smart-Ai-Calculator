@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./calc-be-main
+    ports:
+      - "8900:8900"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PORT=8900
+    volumes:
+      - ./calc-be-main:/app
+    restart: unless-stopped
+
+  frontend:
+    build: ./calc-fe-main
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8900
+    volumes:
+      - ./calc-fe-main:/app
+      - /app/node_modules
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+volumes:
+  node_modules:
