@@ -35,40 +35,107 @@ from constants import GEMINI_API_KEY
 genai.configure(api_key=GEMINI_API_KEY)
 
 def analyze_image(img: Image, dict_of_vars: dict):
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-    dict_of_vars_str = json.dumps(dict_of_vars, ensure_ascii=False)
-    prompt = (
-        f"You have been given an image with some mathematical expressions, equations, or graphical problems, and you need to solve them. "
-        f"Note: Use the PEMDAS rule for solving mathematical expressions. PEMDAS stands for the Priority Order: Parentheses, Exponents, Multiplication and Division (from left to right), Addition and Subtraction (from left to right). Parentheses have the highest priority, followed by Exponents, then Multiplication and Division, and lastly Addition and Subtraction. "
-        f"For example: "
-        f"Q. 2 + 3 * 4 "
-        f"(3 * 4) => 12, 2 + 12 = 14. "
-        f"Q. 2 + 3 + 5 * 4 - 8 / 2 "
-        f"5 * 4 => 20, 8 / 2 => 4, 2 + 3 => 5, 5 + 20 => 25, 25 - 4 => 21. "
-        f"YOU CAN HAVE FIVE TYPES OF EQUATIONS/EXPRESSIONS IN THIS IMAGE, AND ONLY ONE CASE SHALL APPLY EVERY TIME: "
-        f"Following are the cases: "
-        f"1. Simple mathematical expressions like 2 + 2, 3 * 4, 5 / 6, 7 - 8, etc.: In this case, solve and return the answer in the format of a LIST OF ONE DICT [{{'expr': given expression, 'result': calculated answer}}]. "
-        f"2. Set of Equations like x^2 + 2x + 1 = 0, 3y + 4x = 0, 5x^2 + 6y + 7 = 12, etc.: In this case, solve for the given variable, and the format should be a COMMA SEPARATED LIST OF DICTS, with dict 1 as {{'expr': 'x', 'result': 2, 'assign': True}} and dict 2 as {{'expr': 'y', 'result': 5, 'assign': True}}. This example assumes x was calculated as 2, and y as 5. Include as many dicts as there are variables. "
-        f"3. Assigning values to variables like x = 4, y = 5, z = 6, etc.: In this case, assign values to variables and return another key in the dict called {{'assign': True}}, keeping the variable as 'expr' and the value as 'result' in the original dictionary. RETURN AS A LIST OF DICTS. "
-        f"4. Analyzing Graphical Math problems, which are word problems represented in drawing form, such as cars colliding, trigonometric problems, problems on the Pythagorean theorem, adding runs from a cricket wagon wheel, etc. These will have a drawing representing some scenario and accompanying information with the image. PAY CLOSE ATTENTION TO DIFFERENT COLORS FOR THESE PROBLEMS. You need to return the answer in the format of a LIST OF ONE DICT [{{'expr': given expression, 'result': calculated answer}}]. "
-        f"5. Detecting Abstract Concepts that a drawing might show, such as love, hate, jealousy, patriotism, or a historic reference to war, invention, discovery, quote, etc. USE THE SAME FORMAT AS OTHERS TO RETURN THE ANSWER, where 'expr' will be the explanation of the drawing, and 'result' will be the abstract concept. "
-        f"Analyze the equation or expression in this image and return the answer according to the given rules: "
-        f"Make sure to use extra backslashes for escape characters like \\f -> \\\\f, \\n -> \\\\n, etc. "
-        f"Here is a dictionary of user-assigned variables. If the given expression has any of these variables, use its actual value from this dictionary accordingly: {dict_of_vars_str}. "
-        f"DO NOT USE BACKTICKS OR MARKDOWN FORMATTING. "
-        f"PROPERLY QUOTE THE KEYS AND VALUES IN THE DICTIONARY FOR EASIER PARSING WITH Python's ast.literal_eval."
-    )
-    response = model.generate_content([prompt, img])
-    print(response.text)
-    answers = []
     try:
-        answers = ast.literal_eval(response.text)
+        # Optimize image size for faster processing
+        if img.size[0] > 800 or img.size[1] > 800:
+            img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+        
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        dict_of_vars_str = json.dumps(dict_of_vars, ensure_ascii=False)
+        
+        # Enhanced prompt for accurate mathematical analysis
+        prompt = (
+            f"You are a mathematical expert. Examine this image very carefully and solve what is shown. "
+            f""
+            f"WHAT TO LOOK FOR: "
+            f"1. DRAWN SHAPES: rectangles, circles, triangles with measurements labeled "
+            f"2. WRITTEN TEXT: 'find area', 'find perimeter', 'solve for x', etc. "
+            f"3. EQUATIONS: algebraic expressions with = sign "
+            f"4. CALCULATIONS: arithmetic expressions like 2+3, 5×4, etc. "
+            f"5. DIMENSIONS: numbers near shapes indicating length, width, radius "
+            f""
+            f"SOLVE PRECISELY: "
+            f"- If you see a rectangle with dimensions and text asking for AREA → calculate length × width "
+            f"- If you see a rectangle with dimensions and text asking for PERIMETER → calculate 2(length + width) "
+            f"- If you see a circle with radius and text asking for AREA → calculate π × r² "
+            f"- If you see equations with variables → solve for the variable "
+            f"- If you see arithmetic expressions → calculate the exact result "
+            f""
+            f"IMPORTANT: Look at the actual numbers drawn/written in the image, don't guess! "
+            f""
+            f"Return format: [{{'expr': 'what_problem_you_solved', 'result': 'exact_numerical_answer', 'assign': False}}] "
+            f""
+            f"Variables: {dict_of_vars_str} "
+            f"Return ONLY the Python list."
+        )
+        
+        print(f"Processing image: {img.size}")
+        
+        # Configure model with faster settings
+        generation_config = genai.types.GenerationConfig(
+            temperature=0.1,  # Lower temperature for more consistent results
+            max_output_tokens=200,  # Limit output for faster response
+        )
+        
+        response = model.generate_content(
+            [prompt, img], 
+            generation_config=generation_config
+        )
+        print(f"API Response: {response.text}")
+        
+        answers = []
+        try:
+            # Clean the response text by removing markdown code blocks
+            response_text = response.text.strip()
+            print(f"Raw response: '{response_text}'")
+            
+            # Remove various markdown patterns
+            if response_text.startswith('```python'):
+                response_text = response_text[9:]  # Remove ```python
+            elif response_text.startswith('```json'):
+                response_text = response_text[7:]  # Remove ```json
+            elif response_text.startswith('```'):
+                response_text = response_text[3:]   # Remove ```
+            
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]  # Remove trailing ```
+            
+            # Remove any remaining newlines and extra whitespace
+            response_text = response_text.strip()
+            print(f"Cleaned response: '{response_text}'")
+            
+            # Try to parse the cleaned response
+            answers = ast.literal_eval(response_text)
+            print(f"Parsed successfully: {answers}")
+            
+        except Exception as e:
+            print(f"Error in parsing response from Gemini API: {e}")
+            print(f"Raw response text: '{response.text}'")
+            
+            # Enhanced fallback parsing
+            try:
+                # Try to extract just the list part if there's extra text
+                import re
+                list_match = re.search(r'\[.*\]', response.text, re.DOTALL)
+                if list_match:
+                    list_text = list_match.group(0)
+                    answers = ast.literal_eval(list_text)
+                    print(f"Fallback parsing successful: {answers}")
+                else:
+                    answers = [{"expr": "Parsing Error", "result": "Could not extract valid response", "assign": False}]
+            except:
+                answers = [{"expr": "API Error", "result": "Failed to parse response", "assign": False}]
+        
+        print('returned answer ', answers)
+        
+        for answer in answers:
+            if 'assign' in answer:
+                answer['assign'] = True
+            else:
+                answer['assign'] = False
+        
+        return answers
+        
     except Exception as e:
-        print(f"Error in parsing response from Gemini API: {e}")
-    print('returned answer ', answers)
-    for answer in answers:
-        if 'assign' in answer:
-            answer['assign'] = True
-        else:
-            answer['assign'] = False
-    return answers
+        print(f"Error in analyze_image function: {e}")
+        return [{"expr": "Error", "result": f"API Error: {str(e)}", "assign": False}]

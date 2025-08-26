@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
-import { SWATCHES, DRAWING_TOOLS, BRUSH_SIZES } from "../../constants";
+import Draggable from "react-draggable";
+import { SWATCHES, DRAWING_TOOLS, BRUSH_SIZES } from "@/constants";
+
+interface GeneratedResult {
+  expression: string;
+  answer: string;
+}
 
 interface Response {
   expr: string;
@@ -14,14 +20,28 @@ export default function Home() {
   const [color, setColor] = useState("#000000");
   const [reset, setReset] = useState(false);
   const [dictOfVars, setDictOfVars] = useState({});
+  const [result, setResult] = useState<GeneratedResult>();
+  const [latexPosition, setLatexPosition] = useState({ x: 50, y: 100 });
   const [latexExpression, setLatexExpression] = useState<Array<string>>([]);
   const [selectedTool, setSelectedTool] = useState("pen");
   const [brushSize, setBrushSize] = useState(4);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [showTextInput, setShowTextInput] = useState(false);
-  const [textInputPosition, setTextInputPosition] = useState({ x: 0, y: 0 });
-  const [textValue, setTextValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+
+  const renderLatexToCanvas = useCallback(
+    (expression: string, answer: string) => {
+      const latex = `${expression} = ${answer}`;
+      setLatexExpression((prev) => [...prev, latex]);
+
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (latexExpression.length > 0 && window.MathJax) {
@@ -32,9 +52,16 @@ export default function Home() {
   }, [latexExpression]);
 
   useEffect(() => {
+    if (result) {
+      renderLatexToCanvas(result.expression, result.answer);
+    }
+  }, [result, renderLatexToCanvas]);
+
+  useEffect(() => {
     if (reset) {
       resetCanvas();
       setLatexExpression([]);
+      setResult(undefined);
       setDictOfVars({});
       setReset(false);
     }
@@ -74,17 +101,6 @@ export default function Home() {
         document.head.removeChild(script);
       }
     };
-  }, []); // Only run once to avoid canvas clearing
-
-  // Separate effect to update brush size without clearing canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.lineWidth = brushSize;
-      }
-    }
   }, [brushSize]);
 
   const resetCanvas = () => {
@@ -97,25 +113,6 @@ export default function Home() {
     }
   };
 
-  const handleTextSubmit = () => {
-    if (textValue.trim() && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.font = `${brushSize * 4}px Arial`;
-        ctx.fillStyle = color;
-        ctx.fillText(textValue, textInputPosition.x, textInputPosition.y);
-      }
-    }
-    setShowTextInput(false);
-    setTextValue("");
-  };
-
-  const handleTextCancel = () => {
-    setShowTextInput(false);
-    setTextValue("");
-  };
-
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (canvas) {
@@ -125,13 +122,6 @@ export default function Home() {
         const y = e.nativeEvent.offsetY;
 
         setStartPos({ x, y });
-
-        if (selectedTool === "text") {
-          setTextInputPosition({ x, y });
-          setShowTextInput(true);
-          return;
-        }
-
         setIsDrawing(true);
 
         if (selectedTool === "pen") {
@@ -214,37 +204,57 @@ export default function Home() {
   const runRoute = async () => {
     const canvas = canvasRef.current;
     if (canvas) {
-      setIsLoading(true);
-      try {
-        const response = await axios({
-          method: "post",
-          url: `${import.meta.env.VITE_API_URL}/calculate`,
-          data: {
-            image: canvas.toDataURL("image/png"),
-            dict_of_vars: dictOfVars,
-          },
-        });
+      const response = await axios({
+        method: "post",
+        url: `${import.meta.env.VITE_API_URL}/calculate`,
+        data: {
+          image: canvas.toDataURL("image/png"),
+          dict_of_vars: dictOfVars,
+        },
+      });
 
-        const resp = await response.data;
-        console.log("Response", resp);
+      const resp = await response.data;
+      console.log("Response", resp);
+      resp.data.forEach((data: Response) => {
+        if (data.assign === true) {
+          setDictOfVars({
+            ...dictOfVars,
+            [data.expr]: data.result,
+          });
+        }
+      });
 
-        // Update latex expressions for display in result box
-        const expressions = resp.data.map((data: Response) => {
-          if (data.assign === true) {
-            setDictOfVars({
-              ...dictOfVars,
-              [data.expr]: data.result,
-            });
+      const ctx = canvas.getContext("2d");
+      const imageData = ctx!.getImageData(0, 0, canvas.width, canvas.height);
+      let minX = canvas.width,
+        minY = canvas.height,
+        maxX = 0,
+        maxY = 0;
+
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const i = (y * canvas.width + x) * 4;
+          if (imageData.data[i + 3] > 0) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
           }
-          return `${data.expr} = ${data.result}`;
-        });
-
-        setLatexExpression(expressions);
-      } catch (error) {
-        console.error("Error analyzing image:", error);
-      } finally {
-        setIsLoading(false);
+        }
       }
+
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      setLatexPosition({ x: centerX, y: centerY });
+      resp.data.forEach((data: Response) => {
+        setTimeout(() => {
+          setResult({
+            expression: data.expr,
+            answer: data.result,
+          });
+        }, 1000);
+      });
     }
   };
 
@@ -256,6 +266,9 @@ export default function Home() {
         <div className="toolbar-row">
           <button onClick={() => setReset(true)} className="btn btn-danger">
             Clear
+          </button>
+          <button onClick={runRoute} className="btn btn-primary">
+            Calculate
           </button>
         </div>
 
@@ -273,7 +286,7 @@ export default function Home() {
                   }`}
                   title={tool.label}
                 >
-                  {tool.icon}
+                  {tool.label[0]}
                 </button>
               ))}
             </div>
@@ -333,76 +346,19 @@ export default function Home() {
         />
       </div>
 
-      {/* Result Box */}
-      <div className="result-box">
-        <div className="result-header">
-          <span className="result-label">AI Analysis Results:</span>
-          <button
-            onClick={runRoute}
-            className="btn btn-primary"
-            disabled={isLoading}
+      {/* Results */}
+      {latexExpression &&
+        latexExpression.map((latex, index) => (
+          <Draggable
+            key={index}
+            defaultPosition={latexPosition}
+            onStop={(_, data) => setLatexPosition({ x: data.x, y: data.y })}
           >
-            {isLoading ? "Analyzing..." : "Analyze"}
-          </button>
-        </div>
-        {latexExpression && latexExpression.length > 0 && (
-          <div className="result-content">
-            {latexExpression.map((latex, index) => (
-              <div key={index} className="result-item">
-                {latex}
-              </div>
-            ))}
-          </div>
-        )}
-        {!latexExpression || latexExpression.length === 0 ? (
-          <div className="result-placeholder">
-            Draw mathematical expressions or equations and click "Analyze" to
-            get AI-powered solutions.
-          </div>
-        ) : null}
-      </div>
-
-      {/* Text Input Modal */}
-      {showTextInput && (
-        <div
-          className="text-input-modal"
-          style={{
-            position: "absolute",
-            left: textInputPosition.x + 16,
-            top: textInputPosition.y + 200,
-            zIndex: 1000,
-          }}
-        >
-          <div className="text-input-container">
-            <input
-              type="text"
-              value={textValue}
-              onChange={(e) => setTextValue(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  handleTextSubmit();
-                } else if (e.key === "Escape") {
-                  handleTextCancel();
-                }
-              }}
-              placeholder="Enter text..."
-              autoFocus
-              className="text-input"
-            />
-            <div className="text-input-buttons">
-              <button
-                onClick={handleTextSubmit}
-                className="btn btn-primary btn-sm"
-              >
-                Add
-              </button>
-              <button onClick={handleTextCancel} className="btn btn-sm">
-                Cancel
-              </button>
+            <div className="result-container absolute">
+              <div className="result-text">{latex}</div>
             </div>
-          </div>
-        </div>
-      )}
+          </Draggable>
+        ))}
     </div>
   );
 }

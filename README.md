@@ -5,16 +5,18 @@ A modern web-based calculator that uses artificial intelligence to solve mathema
 ## Features
 
 ### Core Functionality
+
 - **Hand-drawn Input**: Draw mathematical expressions directly on a digital canvas
 - **AI-Powered Analysis**: Uses Google's Gemini AI to interpret and solve mathematical problems
 - **Multiple Problem Types**: Supports various mathematical concepts including:
-  - Simple arithmetic expressions (2 + 2, 3 * 4, etc.)
+  - Simple arithmetic expressions (2 + 2, 3 \* 4, etc.)
   - Algebraic equations (x^2 + 2x + 1 = 0)
   - Variable assignments (x = 4, y = 5)
   - Graphical math problems (geometry, trigonometry, word problems)
   - Abstract concept detection from drawings
 
 ### User Interface
+
 - **Interactive Canvas**: Responsive drawing area with multiple color options
 - **Real-time Results**: Instant mathematical expression solving
 - **Variable Management**: Track and reuse assigned variables across calculations
@@ -24,12 +26,14 @@ A modern web-based calculator that uses artificial intelligence to solve mathema
 ## Technology Stack
 
 ### Backend
+
 - **FastAPI**: Modern Python web framework for building APIs
 - **Google Generative AI**: Gemini 1.5 Flash model for image analysis
 - **PIL (Pillow)**: Image processing library
 - **Uvicorn**: ASGI server for running the FastAPI application
 
 ### Frontend
+
 - **React 18**: Modern JavaScript library for building user interfaces
 - **TypeScript**: Type-safe JavaScript development
 - **Vite**: Fast build tool and development server
@@ -67,6 +71,7 @@ Smart-Ai-Calculator/
 ## Installation and Setup
 
 ### Prerequisites
+
 - Python 3.8+
 - Node.js 16+
 - npm or yarn
@@ -75,16 +80,19 @@ Smart-Ai-Calculator/
 ### Backend Setup
 
 1. Navigate to the backend directory:
+
    ```bash
    cd calc-be-main
    ```
 
 2. Install Python dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
 3. Set up environment variables:
+
    - Create a `.env` file in the `calc-be-main` directory
    - Add your Google AI API key:
      ```
@@ -101,11 +109,13 @@ The backend will be available at `http://localhost:8000`
 ### Frontend Setup
 
 1. Navigate to the frontend directory:
+
    ```bash
    cd calc-fe-main
    ```
 
 2. Install Node.js dependencies:
+
    ```bash
    npm install
    ```
@@ -130,9 +140,11 @@ The frontend will be available at `http://localhost:5173`
 ## API Endpoints
 
 ### POST /calculate
+
 Analyzes a drawn mathematical expression and returns the solution.
 
 **Request Body:**
+
 ```json
 {
   "image": "data:image/png;base64,<base64_encoded_image>",
@@ -141,6 +153,7 @@ Analyzes a drawn mathematical expression and returns the solution.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Image processed",
@@ -157,7 +170,7 @@ Analyzes a drawn mathematical expression and returns the solution.
 
 ## Mathematical Expression Types
 
-1. **Arithmetic**: Basic operations (+, -, *, /)
+1. **Arithmetic**: Basic operations (+, -, \*, /)
 2. **Algebraic**: Polynomial equations and variable solving
 3. **Assignments**: Variable declarations (x = 5)
 4. **Graphical Problems**: Visual math problems with drawings
@@ -166,19 +179,24 @@ Analyzes a drawn mathematical expression and returns the solution.
 ## Development
 
 ### Code Style
+
 - Backend: Follows PEP 8 Python style guidelines
 - Frontend: Uses ESLint with TypeScript rules
 - Formatting: Consistent code formatting across the project
 
 ### Testing
+
 Run linting for the frontend:
+
 ```bash
 cd calc-fe-main
 npm run lint
 ```
 
 ### Building for Production
+
 Build the frontend for production:
+
 ```bash
 cd calc-fe-main
 npm run build
