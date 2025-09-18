@@ -13,7 +13,7 @@ A modern web-based calculator that uses artificial intelligence to solve mathema
   - Algebraic equations (x^2 + 2x + 1 = 0)
   - Variable assignments (x = 4, y = 5)
   - Graphical math problems (geometry, trigonometry, word problems)
-  - Abstract concept detection from drawings
+  - Abstract concept detection from  drawings
 
 ### User Interface
 
