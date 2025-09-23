@@ -79,7 +79,7 @@ Smart-Ai-Calculator/
 
 ### Backend Setup
 
-1. Navigate to the backend directory:
+1. Navigate to the backend directory :
 
    ```bash
    cd calc-be-main
