@@ -4,7 +4,7 @@ A modern web-based calculator that uses artificial intelligence to solve mathema
 
 ## Features
 
-### Core Functionality
+### Core Functionality.
 
 - **Hand-drawn Input**: Draw mathematical expressions directly on a digital canvas.
 - **AI-Powered Analysis**: Uses Google's Gemini AI to interpret and solve mathematical problems
