@@ -32,6 +32,8 @@ A modern web-based calculator that uses artificial intelligence to solve mathema
 - **PIL (Pillow)**: Image processing library
 - **Uvicorn**: ASGI server for running the FastAPI application
 
+
+
 ### Frontend
 
 - **React 18**: Modern JavaScript library for building user interfaces
